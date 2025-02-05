@@ -2,12 +2,12 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import time
 import google.generativeai as genai
-
+from apip import *
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
 # Configure Gemini API
-genai.configure(api_key="AIzaSyDZ8otPEiYmxD7lPEmyQLJSzRPYvl-PFEY")
+genai.configure(api_key=api_key)
 
 def safe_generate_completion(prompt: str, max_retries=3) -> str:
     """Safely generate completion with retry logic using Gemini API"""
