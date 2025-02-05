@@ -1,38 +1,33 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import time
-from openai import OpenAI
+import google.generativeai as genai
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
-# Configure OpenAI client for LM Studio
-client = OpenAI(
-    base_url="http://localhost:1234/v1",
-    api_key="sk-no-key-required"
-)
+# Configure Gemini API
+genai.configure(api_key="AIzaSyDZ8otPEiYmxD7lPEmyQLJSzRPYvl-PFEY")
 
 def safe_generate_completion(prompt: str, max_retries=3) -> str:
-    """Safely generate completion with retry logic"""
+    """Safely generate completion with retry logic using Gemini API"""
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(
-                model="llama-2-7b-chat",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=1000
-            )
-            return response.choices[0].message.content.strip()
+            model = genai.GenerativeModel("gemini-pro")
+            response = model.generate_content(prompt)  # No safety settings
+            return response.text.strip() if response and response.text else "No response generated."
         except Exception as e:
             print(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(1)
+    
     return "Error generating response."
 
+
 def generate_movie_concept(concept: str, genre: str):
-    """Generate a movie concept"""
-    title_prompt = f"Create a catchy title for a {genre} movie about: {concept}"
-    synopsis_prompt = f"Write a short synopsis for a {genre} movie about: {concept}"
-    character_prompt = f"Create a main character for a {genre} movie about: {concept}"
+    """Generate a safe movie concept using Gemini API"""
+    title_prompt = f"Generate a creative but family-friendly movie title for a {genre} movie about: {concept}."
+    synopsis_prompt = f"Write a concise and engaging synopsis for a {genre} movie about: {concept}. Ensure the content is suitable for all audiences."
+    character_prompt = f"Create a main character for a {genre} movie about: {concept}. Make sure the description is family-friendly."
 
     title = safe_generate_completion(title_prompt)
     synopsis = safe_generate_completion(synopsis_prompt)
@@ -47,12 +42,10 @@ def generate_movie_concept(concept: str, genre: str):
 
 @app.route("/")
 def index():
-    """Serve the front-end HTML"""
     return render_template("index.html")
 
 @app.route("/generate-movie", methods=["POST"])
 def generate_movie():
-    """API endpoint to receive concept & genre, return movie details"""
     data = request.json
     concept = data.get("concept")
     genre = data.get("genre")
